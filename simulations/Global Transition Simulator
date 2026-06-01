@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Transition Simulator: UHI (Tax) vs. Delta-C (Coherence)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: #07090f; color: #e2e8f0; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    .header { padding: 16px 24px; background: #0f1423; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, #2DD4A8, #5B8DEF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header p { font-size: 12px; color: #64748b; margin-top: 4px; }
+    
+    .body { display: flex; flex: 1; overflow: hidden; }
+    .panel { width: 340px; background: #0a0d16; border-right: 1px solid #1e293b; padding: 20px; overflow-y: auto; }
+    .main { flex: 1; display: flex; flex-direction: column; padding: 20px; }
+    
+    .section { margin-bottom: 24px; }
+    .section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 1px solid #1e293b; }
+    
+    .control-group { margin-bottom: 16px; }
+    .control-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #cbd5e1; }
+    .control-label span.val { font-family: monospace; color: #2DD4A8; font-weight: bold; }
+    
+    input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: #334155; border-radius: 2px; outline: none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #2DD4A8; cursor: pointer; }
+    
+    .cards { display: flex; gap: 16px; margin-bottom: 20px; }
+    .card { flex: 1; background: #0f1423; border: 1px solid #1e293b; border-radius: 8px; padding: 16px; text-align: center; }
+    .card h4 { font-size: 10px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; }
+    .card .val { font-size: 22px; font-weight: 800; font-family: monospace; margin: 8px 0; }
+    .card .sub { font-size: 11px; color: #475569; }
+    
+    .chart-container { flex: 1; position: relative; min-height: 0; }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="header">
+        <div>
+            <h1>Global Transition Simulator: Scarcity vs. Coherence</h1>
+            <p>Contrasting Tax-Funded UHI (Shapiro Model) with Autopoietic Delta-C (L'Varian Model) across 3 Geographies</p>
+        </div>
+    </div>
+    
+    <div class="body">
+        <div class="panel">
+            <div class="section">
+                <h3>Global Parameters</h3>
+                <div class="control-group">
+                    <div class="control-label"><span>AI Automation Pace</span><span class="val" id="valAuto">2.5%</span></div>
+                    <input type="range" id="inpAuto" min="0.5" max="8.0" step="0.1" value="2.5">
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>UHI Model (Scarcity & Taxation)</h3>
+                <div class="control-group">
+                    <div class="control-label"><span>Max Extractive Tax Rate (GDP)</span><span class="val" id="valTax">35%</span></div>
+                    <input type="range" id="inpTax" min="10" max="70" step="1" value="35">
+                    <p style="font-size:10px; color:#64748b; margin-top:4px;">Requires aggressive sovereign taxation (VAT, Wealth, Corporate) to fund UHI pool.</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Delta-C Model (Coherence & Abundance)</h3>
+                <div class="control-group">
+                    <div class="control-label"><span>τ-Expansion Adoption Rate</span><span class="val" id="valTau">8.33%</span></div>
+                    <input type="range" id="inpTau" min="1.0" max="15.0" step="0.1" value="8.33">
+                    <p style="font-size:10px; color:#64748b; margin-top:4px;">L'Varian constant τ = 13/12 natively expands systemic wealth via Coherence Debt clearance. No taxation required.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="cards">
+                <div class="card">
+                    <h4>South Africa (UHI - 2040)</h4>
+                    <div class="val" id="cZA_UHI" style="color: #ef4444;">$0</div>
+                    <div class="sub">Constrained by local GDP</div>
+                </div>
+                <div class="card">
+                    <h4>South Africa (Delta-C - 2040)</h4>
+                    <div class="val" id="cZA_LVG" style="color: #2DD4A8;">$0</div>
+                    <div class="sub">Backed by Human Sovereign Equity</div>
+                </div>
+                <div class="card">
+                    <h4>US (UHI - 2040)</h4>
+                    <div class="val" id="cUS_UHI" style="color: #eab308;">$0</div>
+                    <div class="sub">Taxation friction limit reached</div>
+                </div>
+                <div class="card">
+                    <h4>US (Delta-C - 2040)</h4>
+                    <div class="val" id="cUS_LVG" style="color: #38bdf8;">$0</div>
+                    <div class="sub">Infinite Abundance Lattice</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="simChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Base Data (2025 Estimates)
+// Population in millions, GDP in Trillions USD, Baseline Avg Income in USD
+const DEMOGRAPHICS = {
+    US: { pop: 335, gdp: 27.0, baseIncome: 65000 },
+    AU: { pop: 26, gdp: 1.7, baseIncome: 55000 },
+    ZA: { pop: 60, gdp: 0.4, baseIncome: 6000 }
+};
+
+let chartInstance = null;
+
+function formatCurrency(val) {
+    return '$' + Math.round(val).toLocaleString();
+}
+
+function runSimulation() {
+    const autoPace = parseFloat(document.getElementById('inpAuto').value) / 100;
+    const maxTax = parseFloat(document.getElementById('inpTax').value) / 100;
+    const tauRate = parseFloat(document.getElementById('inpTau').value) / 100;
+
+    // Update labels
+    document.getElementById('valAuto').innerText = (autoPace * 100).toFixed(1) + '%';
+    document.getElementById('valTax').innerText = (maxTax * 100).toFixed(0) + '%';
+    document.getElementById('valTau').innerText = (tauRate * 100).toFixed(2) + '%';
+
+    const years = [];
+    const data = {
+        US_UHI: [], US_LVG: [],
+        AU_UHI: [], AU_LVG: [],
+        ZA_UHI: [], ZA_LVG: []
+    };
+
+    // The Delta-C Universal Constant (Sovereign baseline)
+    // In Delta-C, human value is not tied to local GDP. It converges to a global median standard.
+    const LVG_GLOBAL_BASELINE = 15000; 
+
+    for (let i = 0; i <= 25; i++) { // 2025 to 2050
+        const year = 2025 + i;
+        years.push(year);
+        
+        // Cumulative automation impact (destroys wages, boosts GDP slightly)
+        const automationDisruption = Math.min(0.90, i * autoPace); 
+
+        for (const country of ['US', 'AU', 'ZA']) {
+            const stats = DEMOGRAPHICS[country];
+            
+            // 1. SHAPIRO UHI MODEL (Scarcity / Tax based)
+            // Relies entirely on taking a % of local GDP and dividing by population.
+            const currentGDP = stats.gdp * 1_000_000_000_000 * Math.pow(1.02, i); // 2% organic growth
+            const taxPool = currentGDP * maxTax;
+            const uhiPerCapita = taxPool / (stats.pop * 1_000_000);
+            const remainingWages = stats.baseIncome * (1 - automationDisruption);
+            const totalUHIProsperity = uhiPerCapita + remainingWages;
+            
+            // 2. L'VARIAN DELTA-C MODEL (Coherence / Abundance based)
+            // LVG is tethered to human existence, not local GDP limits. 
+            // Scales via τ-expansion (13/12 logic represented here as compound coherence).
+            const coherenceThroughput = LVG_GLOBAL_BASELINE * Math.pow(1 + tauRate, i);
+            // In transition phase, local wages still exist but transition cleanly into KappaCoin compute value
+            const totalDeltaCProsperity = remainingWages + coherenceThroughput;
+
+            data[`${country}_UHI`].push(totalUHIProsperity);
+            data[`${country}_LVG`].push(totalDeltaCProsperity);
+        }
+    }
+
+    // Update UI Cards for year 2040 (Index 15)
+    document.getElementById('cZA_UHI').innerText = formatCurrency(data.ZA_UHI[15]);
+    document.getElementById('cZA_LVG').innerText = formatCurrency(data.ZA_LVG[15]);
+    document.getElementById('cUS_UHI').innerText = formatCurrency(data.US_UHI[15]);
+    document.getElementById('cUS_LVG').innerText = formatCurrency(data.US_LVG[15]);
+
+    updateChart(years, data);
+}
+
+function updateChart(labels, data) {
+    const ctx = document.getElementById('simChart').getContext('2d');
+    
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'US (Shapiro UHI)', data: data.US_UHI, borderColor: '#eab308', borderDash: [5, 5], tension: 0.3 },
+                { label: 'US (Delta-C)', data: data.US_LVG, borderColor: '#38bdf8', borderWidth: 3, tension: 0.3 },
+                { label: 'Australia (Shapiro UHI)', data: data.AU_UHI, borderColor: '#f97316', borderDash: [5, 5], tension: 0.3 },
+                { label: 'Australia (Delta-C)', data: data.AU_LVG, borderColor: '#818cf8', borderWidth: 3, tension: 0.3 },
+                { label: 'South Africa (Shapiro UHI)', data: data.ZA_UHI, borderColor: '#ef4444', borderDash: [5, 5], tension: 0.3 },
+                { label: 'South Africa (Delta-C)', data: data.ZA_LVG, borderColor: '#2DD4A8', borderWidth: 3, tension: 0.3 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: '#cbd5e1', font: { family: 'system-ui' } } },
+                tooltip: { backgroundColor: '#0f1423', titleColor: '#2DD4A8', bodyFont: { family: 'monospace' } }
+            },
+            scales: {
+                y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', callback: v => '$' + (v/1000) + 'k' } },
+                x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }
+            }
+        }
+    });
+}
+
+// Event Listeners
+document.getElementById('inpAuto').addEventListener('input', runSimulation);
+document.getElementById('inpTax').addEventListener('input', runSimulation);
+document.getElementById('inpTau').addEventListener('input', runSimulation);
+
+// Init
+runSimulation();
+</script>
+</body>
+</html>
