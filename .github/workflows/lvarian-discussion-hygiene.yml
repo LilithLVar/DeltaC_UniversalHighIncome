@@ -1,0 +1,285 @@
+name: "🤖 L'Varian Discussion Hygiene & Categorization"
+
+# Automatically categorize discussions, detect axiom compliance, and measure coherence
+# Aligns with E₁ (equal access) and enables emergent consensus detection
+
+on:
+  discussion:
+    types: [created, edited, categorized]
+  issue_comment:
+    types: [created]
+
+env:
+  HYGIENE_VERSION: "1.0.0"
+  AXIOM_CHECK_ENABLED: "true"
+  CONSENSUS_DETECTION_ENABLED: "true"
+
+jobs:
+  auto-categorize:
+    name: "📁 Auto-Categorize Discussion"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'discussion' && github.event.action == 'created'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Analyze discussion content
+        id: analyze
+        run: |
+          echo "🔍 Analyzing discussion for axiom patterns..."
+          
+          TITLE="${{ github.event.discussion.title }}"
+          BODY="${{ github.event.discussion.body }}"
+          CONTENT="$TITLE $BODY"
+          
+          # Initialize category scores
+          N1_SCORE=0
+          E1_SCORE=0
+          TAU_SCORE=0
+          KAPPA_SCORE=0
+          
+          # N₁ Patterns (Null Primacy)
+          if echo "$CONTENT" | grep -qiE "geographic|borderless|timezone|locale|country|region|ip-based|geo"; then
+            N1_SCORE=$((N1_SCORE + 1))
+          fi
+          
+          # E₁ Patterns (Equity of Measure)
+          if echo "$CONTENT" | grep -qiE "equity|equal|fair|hierarchy|privilege|access|tiered|premium"; then
+            E1_SCORE=$((E1_SCORE + 1))
+          fi
+          
+          # τ Patterns (Expansion Rate)
+          if echo "$CONTENT" | grep -qiE "expansion|growth|scaling|tau|13/12|network|onboard"; then
+            TAU_SCORE=$((TAU_SCORE + 1))
+          fi
+          
+          # κ Patterns (Strain Management)
+          if echo "$CONTENT" | grep -qiE "strain|harmony|automation|velocity|pressure|friction|burnout|capacity"; then
+            KAPPA_SCORE=$((KAPPA_SCORE + 1))
+          fi
+          
+          # Determine primary category
+          MAX_SCORE=0
+          PRIMARY_CATEGORY="general"
+          
+          if [ $N1_SCORE -gt $MAX_SCORE ]; then
+            MAX_SCORE=$N1_SCORE
+            PRIMARY_CATEGORY="axiomatic-foundations-n1"
+          fi
+          if [ $E1_SCORE -gt $MAX_SCORE ]; then
+            MAX_SCORE=$E1_SCORE
+            PRIMARY_CATEGORY="axiomatic-foundations-e1"
+          fi
+          if [ $TAU_SCORE -gt $MAX_SCORE ]; then
+            MAX_SCORE=$TAU_SCORE
+            PRIMARY_CATEGORY="axiomatic-foundations-tau"
+          fi
+          if [ $KAPPA_SCORE -gt $MAX_SCORE ]; then
+            MAX_SCORE=$KAPPA_SCORE
+            PRIMARY_CATEGORY="axiomatic-foundations-kappa"
+          fi
+          
+          echo "n1_score=$N1_SCORE" >> $GITHUB_OUTPUT
+          echo "e1_score=$E1_SCORE" >> $GITHUB_OUTPUT
+          echo "tau_score=$TAU_SCORE" >> $GITHUB_OUTPUT
+          echo "kappa_score=$KAPPA_SCORE" >> $GITHUB_OUTPUT
+          echo "primary_category=$PRIMARY_CATEGORY" >> $GITHUB_OUTPUT
+          
+          echo "Analysis complete:"
+          echo "  N₁ Score: $N1_SCORE"
+          echo "  E₁ Score: $E1_SCORE"
+          echo "  τ Score: $TAU_SCORE"
+          echo "  κ Score: $KAPPA_SCORE"
+          echo "  Primary Category: $PRIMARY_CATEGORY"
+      
+      - name: Suggest category via comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const n1Score = '${{ steps.analyze.outputs.n1_score }}';
+            const e1Score = '${{ steps.analyze.outputs.e1_score }}';
+            const tauScore = '${{ steps.analyze.outputs.tau_score }}';
+            const kappaScore = '${{ steps.analyze.outputs.kappa_score }}';
+            const primaryCategory = '${{ steps.analyze.outputs.primary_category }}';
+            
+            let message = "## 🤖 Automated Categorization Analysis\n\n";
+            message += "**Axiom Pattern Scores**:\n";
+            message += `- N₁ (Null Primacy): ${n1Score}\n`;
+            message += `- E₁ (Equity of Measure): ${e1Score}\n`;
+            message += `- τ (Expansion Rate): ${tauScore}\n`;
+            message += `- κ (Strain Management): ${kappaScore}\n\n`;
+            
+            if (primaryCategory !== 'general') {
+              message += `**Suggested Category**: \`${primaryCategory}\`\n\n`;
+              message += "*A maintainer can recategorize if this analysis is incorrect.*\n";
+            } else {
+              message += "*No strong axiom patterns detected. General category assigned.*\n";
+            }
+            
+            message += "\n---\n*Powered by L'Varian Discussion Hygiene v${{ env.HYGIENE_VERSION }}*";
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.discussion.number,
+              body: message
+            });
+
+  axiom-compliance-check:
+    name: "⚖️ Axiom Compliance Check"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'discussion' || github.event_name == 'issue_comment'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for axiom violations
+        run: |
+          echo "⚖️ Checking for potential axiom violations..."
+          
+          CONTENT="${{ github.event.discussion.body || github.event.comment.body }}"
+          
+          VIOLATIONS=""
+          
+          # Check for geographic privilege language (N₁ violation)
+          if echo "$CONTENT" | grep -qiE "only in [A-Z][a-z]+|US only|America first|developed countries only"; then
+            VIOLATIONS="$VIOLATIONS\n⚠️ Potential N₁ violation: Geographic privilege language detected"
+          fi
+          
+          # Check for hierarchical language (E₁ violation)
+          if echo "$CONTENT" | grep -qiE "admin only|vip access|premium contributors|inner circle"; then
+            VIOLATIONS="$VIOLATIONS\n⚠️ Potential E₁ violation: Hierarchical privilege language detected"
+          fi
+          
+          # Check for extractive language
+          if echo "$CONTENT" | grep -qiE "pay to win|buy votes|sponsor for priority"; then
+            VIOLATIONS="$VIOLATIONS\n⚠️ Potential E₁ violation: Extractive mechanism suggested"
+          fi
+          
+          if [ -n "$VIOLATIONS" ]; then
+            echo "Violations found:$VIOLATIONS"
+            echo "::warning::Potential axiom violations detected. Review recommended."
+            echo "has_violations=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No axiom violations detected"
+            echo "has_violations=false" >> $GITHUB_OUTPUT
+          fi
+
+  coherence-measurement:
+    name: "🕸️ Measure Discussion Coherence"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'discussion'
+    outputs:
+      coherence_score: ${{ steps.measure.outputs.coherence_score }}
+      alignment_cluster: ${{ steps.measure.outputs.alignment_cluster }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Calculate coherence metrics
+        id: measure
+        run: |
+          echo "🕸️ Measuring discussion coherence..."
+          
+          # Simulate coherence calculation based on:
+          # - Clarity of axiomatic framing
+          # - Alignment with L'Varian principles
+          # - Constructive tone
+          # - Specificity of proposals
+          
+          TITLE="${{ github.event.discussion.title }}"
+          BODY="${{ github.event.discussion.body }}"
+          
+          SCORE=75  # Base score
+          
+          # Bonus for using template
+          if echo "$BODY" | grep -q "Which Axioms Apply"; then
+            SCORE=$((SCORE + 15))
+            echo "✓ Template used (+15)"
+          fi
+          
+          # Bonus for axiom tags
+          if echo "$BODY" | grep -qE "\[X\].*N₁|\[X\].*E₁|\[X\].*τ|\[X\].*κ"; then
+            SCORE=$((SCORE + 10))
+            echo "✓ Axioms tagged (+10)"
+          fi
+          
+          # Bonus for detailed content
+          WORD_COUNT=$(echo "$BODY" | wc -w)
+          if [ $WORD_COUNT -gt 100 ]; then
+            SCORE=$((SCORE + 5))
+            echo "✓ Detailed content (+5)"
+          fi
+          
+          # Penalty for unclear titles
+          if [ ${#TITLE} -lt 10 ]; then
+            SCORE=$((SCORE - 10))
+            echo "✗ Title too short (-10)"
+          fi
+          
+          # Ensure score is in valid range
+          if [ $SCORE -gt 100 ]; then SCORE=100; fi
+          if [ $SCORE -lt 0 ]; then SCORE=0; fi
+          
+          # Determine alignment cluster
+          if [ $SCORE -ge 85 ]; then
+            CLUSTER="strong-alignment"
+          elif [ $SCORE -ge 65 ]; then
+            CLUSTER="moderate-alignment"
+          else
+            CLUSTER="needs-refinement"
+          fi
+          
+          echo "coherence_score=$SCORE" >> $GITHUB_OUTPUT
+          echo "alignment_cluster=$CLUSTER" >> $GITHUB_OUTPUT
+          
+          echo ""
+          echo "Coherence Score: $SCORE/100"
+          echo "Alignment Cluster: $CLUSTER"
+
+  delta-c-eligibility:
+    name: "💎 Check δ^c Credit Eligibility"
+    runs-on: ubuntu-latest
+    needs: coherence-measurement
+    if: github.event_name == 'discussion' && needs.coherence-measurement.outputs.coherence_score >= 70
+    steps:
+      - name: Generate credit eligibility record
+        run: |
+          echo "💎 Discussion eligible for δ^c credit consideration"
+          
+          mkdir -p .lvarian/credits/discussions
+          
+          cat > .lvarian/credits/discussions/${{ github.event.discussion.number }}.json << EOF
+          {
+            "@context": "https://lvarian.org/context/v1",
+            "@type": "DeltaCEligibilityRecord",
+            "discussion_number": ${{ github.event.discussion.number }},
+            "author": "${{ github.event.discussion.user.login }}",
+            "title": "${{ github.event.discussion.title }}",
+            "coherence_score": ${{ needs.coherence-measurement.outputs.coherence_score }},
+            "alignment_cluster": "${{ needs.coherence-measurement.outputs.alignment_cluster }}",
+            "eligible_for_credit": true,
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "verification_hash": "$(echo -n '${{ github.event.discussion.number }}-${{ github.event.discussion.user.login }}-$(date +%s)' | sha256sum | cut -d' ' -f1)"
+          }
+          EOF
+          
+          echo "✅ Eligibility record created"
+          cat .lvarian/credits/discussions/${{ github.event.discussion.number }}.json
+
+  hygiene-summary:
+    name: "📊 Post Hygiene Summary"
+    runs-on: ubuntu-latest
+    needs: [auto-categorize, axiom-compliance-check, coherence-measurement]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🪐 Discussion Hygiene Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Auto-Categorization | ✅ Complete | ${{ needs.auto-categorize.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Axiom Compliance | ${{ needs.axiom-compliance-check.result }} | Review if violations |" >> $GITHUB_STEP_SUMMARY
+          echo "| Coherence Score | ✅ Measured | ${{ needs.coherence-measurement.outputs.coherence_score }}/100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| δ^c Eligibility | ${{ needs.delta-c-eligibility.result }} | High-coherence discussions |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Hygiene Version**: ${{ env.HYGIENE_VERSION }}" >> $GITHUB_STEP_SUMMARY
