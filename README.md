@@ -125,3 +125,6 @@ If the automation pace triggers an erratic spike in $\kappa$-strain past your co
 Submit a pull request if your branch optimizes the transition pathway through the Midnight Valley. Leave a comment if you are ready to stop calculating the tax rate on a system that won't exist by Friday.
 
 Clock's ticking. 85 seconds left.
+
+For more information check out:
+https://licd.com.au/currency/
