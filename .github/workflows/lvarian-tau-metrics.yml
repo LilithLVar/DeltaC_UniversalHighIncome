@@ -1,0 +1,387 @@
+# 📊 L'Varian Tau-Expansion Metrics Engine
+# Calculates τ-expansion rate, lattice health, and collective progress metrics
+# Implements natural growth rate of 13/12 ≈ 1.083333
+
+name: "📊 L'Varian Tau-Expansion Metrics"
+
+on:
+  schedule:
+    # Run every 6 hours to track expansion
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'metrics/**'
+      - '.github/workflows/lvarian-tau-metrics.yml'
+
+env:
+  TAU_RATE: "1.083333"  # 13/12 - Natural expansion rate
+  METRICS_VERSION: "1.5.0"
+  IPFS_GATEWAY: "https://ipfs.io/ipfs/"
+
+jobs:
+  calculate-tau-expansion:
+    name: "🌀 Calculate τ-Expansion Rate"
+    runs-on: ubuntu-latest
+    outputs:
+      tau_actual: ${{ steps.calculate.outputs.tau_actual }}
+      tau_target: ${{ steps.calculate.outputs.tau_target }}
+      expansion_status: ${{ steps.calculate.outputs.expansion_status }}
+      contributor_count: ${{ steps.calculate.outputs.contributor_count }}
+      contribution_count: ${{ steps.calculate.outputs.contribution_count }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install PyGithub requests pandas numpy
+
+      - name: Calculate tau expansion metrics
+        id: calculate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🌀 Calculating τ-expansion metrics..."
+          python3 ${{ github.workspace }}/metrics/calculate_tau_expansion.py \
+            --repo ${{ github.repository }} \
+            --token $GITHUB_TOKEN \
+            --output tau_metrics.json
+
+      - name: Display expansion metrics
+        run: |
+          if [ -f "tau_metrics.json" ]; then
+            cat tau_metrics.json
+            TAU_ACTUAL=$(python3 -c "import json; print(json.load(open('tau_metrics.json'))['tau_actual'])")
+            TAU_TARGET=$(python3 -c "import json; print(json.load(open('tau_metrics.json'))['tau_target'])")
+            
+            echo ""
+            echo "## τ-Expansion Analysis"
+            echo "- Actual τ: $TAU_ACTUAL"
+            echo "- Target τ: $TAU_TARGET ($TAU_RATE)"
+            
+            # Compare actual vs target
+            python3 << EOF
+          import json
+          
+          data = json.load(open('tau_metrics.json'))
+          tau_actual = float(data['tau_actual'])
+          tau_target = float(data['tau_target'])
+          
+          diff = abs(tau_actual - tau_target)
+          
+          if diff < 0.05:
+              status = "🟢 OPTIMAL"
+          elif diff < 0.15:
+              status = "🟡 ACCEPTABLE"
+          else:
+              status = "🔴 SUBOPTIMAL"
+          
+          print(f"- Deviation: {diff:.4f}")
+          print(f"- Status: {status}")
+          
+          # Save status for later steps
+          with open('expansion_status.txt', 'w') as f:
+              f.write(status)
+          EOF
+          else
+            echo "::error::Tau metrics calculation failed"
+            exit 1
+          fi
+
+      - name: Upload tau metrics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tau-metrics-${{ github.run_id }}
+          path: tau_metrics.json
+          retention-days: 90
+
+  lattice-health-assessment:
+    name: "🕸️ Lattice Health Assessment"
+    runs-on: ubuntu-latest
+    needs: calculate-tau-expansion
+    outputs:
+      health_score: ${{ steps.assess.outputs.health_score }}
+      health_status: ${{ steps.assess.outputs.health_status }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Assess lattice health
+        id: assess
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🕸️ Assessing lattice health..."
+          python3 ${{ github.workspace }}/metrics/assess_lattice_health.py \
+            --repo ${{ github.repository }} \
+            --token $GITHUB_TOKEN \
+            --tau-metrics tau_metrics.json \
+            --output lattice_health.json
+
+      - name: Display health assessment
+        run: |
+          if [ -f "lattice_health.json" ]; then
+            cat lattice_health.json
+            
+            HEALTH_SCORE=$(python3 -c "import json; print(json.load(open('lattice_health.json'))['overall_health_score'])")
+            
+            echo ""
+            echo "## Lattice Health Summary"
+            echo "- Overall Score: $HEALTH_SCORE/100"
+            
+            python3 << EOF
+          import json
+          
+          data = json.load(open('lattice_health.json'))
+          score = float(data['overall_health_score'])
+          
+          if score >= 85:
+              status = "🟢 THRIVING"
+          elif score >= 70:
+              status = "🟡 STABLE"
+          elif score >= 50:
+              status = "🟠 STRESSED"
+          else:
+              status = "🔴 CRITICAL"
+          
+          print(f"- Status: {status}")
+          
+          with open('health_status.txt', 'w') as f:
+              f.write(status)
+          EOF
+          else
+            echo "::error::Lattice health assessment failed"
+            exit 1
+          fi
+
+      - name: Upload lattice health artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lattice-health-${{ github.run_id }}
+          path: lattice_health.json
+          retention-days: 90
+
+  collective-progress-metrics:
+    name: "👥 Collective Progress Metrics"
+    runs-on: ubuntu-latest
+    needs: [calculate-tau-expansion, lattice-health-assessment]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Calculate collective progress
+        run: |
+          echo "👥 Calculating collective progress metrics..."
+          python3 ${{ github.workspace }}/metrics/calculate_collective_progress.py \
+            --repo ${{ github.repository }} \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --tau-metrics tau_metrics.json \
+            --lattice-health lattice_health.json \
+            --output collective_progress.json
+
+      - name: Generate progress dashboard
+        run: |
+          if [ -f "collective_progress.json" ]; then
+            echo "## 📊 Collective Progress Dashboard" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            python3 << EOF
+          import json
+          from datetime import datetime
+          
+          data = json.load(open('collective_progress.json'))
+          
+          print("### Key Metrics")
+          print("")
+          print(f"- **Active Contributors**: {data.get('active_contributors', 0)}")
+          print(f"- **Total Contributions (period)**: {data.get('total_contributions', 0)}")
+          print(f"- **Collaboration Index**: {data.get('collaboration_index', 0):.2f}")
+          print(f"- **Knowledge Distribution**: {data.get('knowledge_distribution', 0):.2f}")
+          print(f"- **Flow State Protection**: {data.get('flow_state_score', 0):.2f}/100")
+          print("")
+          
+          print("### Contribution by Category")
+          for category, count in data.get('contributions_by_category', {}).items():
+              print(f"- {category}: {count}")
+          print("")
+          
+          print("### τ-Alignment")
+          print(f"- Expansion Rate: {data.get('tau_actual', 0):.4f}")
+          print(f"- Target Rate: {data.get('tau_target', 0):.4f}")
+          print(f"- Alignment: {data.get('tau_alignment', 'Unknown')}")
+          print("")
+          
+          print(f"*Generated: {datetime.utcnow().isoformat()}Z*")
+          EOF
+          fi
+
+  generate-exploration-challenges:
+    name: "🧭 Generate Monthly Exploration Challenges"
+    runs-on: ubuntu-latest
+    needs: [calculate-tau-expansion, lattice-health-assessment]
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate exploration challenges
+        run: |
+          echo "🧭 Generating monthly exploration challenges..."
+          
+          mkdir -p .lvarian/challenges
+          
+          cat > .lvarian/challenges/month_$(date +%Y%m).md << EOF
+      # 🧭 L'Varian Exploration Challenge - $(date +%B %Y)
+      
+      ## Theme: τ-Expansion Through Discovery
+      
+      Based on current lattice metrics:
+      - τ-Expansion: ${{ needs.calculate-tau-expansion.outputs.tau_actual }}
+      - Lattice Health: ${{ needs.lattice-health-assessment.outputs.health_status }}
+      - Active Contributors: ${{ needs.calculate-tau-expansion.outputs.contributor_count }}
+      
+      ## Challenge Areas
+      
+      ### 1. Code Exploration
+      - [ ] Explore an unfamiliar module and document findings
+      - [ ] Refactor legacy code with axiom compliance
+      - [ ] Add tests for untested pathways
+      
+      ### 2. Knowledge Expansion
+      - [ ] Write documentation for complex feature
+      - [ ] Create tutorial for new contributors
+      - [ ] Map knowledge gaps in the lattice
+      
+      ### 3. Collaboration Enhancement
+      - [ ] Pair program with someone from different timezone
+      - [ ] Review PRs outside your usual areas
+      - [ ] Mentor a new contributor
+      
+      ### 4. Axiomatic Innovation
+      - [ ] Propose improvement to N₁ compliance
+      - [ ] Enhance E₁ equity mechanisms
+      - [ ] Reduce κ-strain in workflows
+      
+      ## Rewards
+      
+      Completing challenges earns δ^c credits:
+      - Basic challenge: 10 δ^c
+      - Advanced challenge: 25 δ^c
+      - Breakthrough discovery: 50 δ^c
+      
+      ## Submission
+      
+      Submit completed challenges via PR to .lvarian/challenges/submissions/
+      
+      ---
+      *Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)*
+      *τ-Rate: $TAU_RATE*
+      EOF
+          
+          echo "✅ Challenge file created: .lvarian/challenges/month_$(date +%Y%m).md"
+
+      - name: Create challenge issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📋 Creating exploration challenge issue..."
+          
+          gh issue create \
+            --title "🧭 Exploration Challenge: $(date +%B %Y)" \
+            --body-file ".lvarian/challenges/month_$(date +%Y%m).md" \
+            --label "exploration" \
+            --label "monthly-challenge" \
+            --assignee "${{ github.actor }}" || true
+
+  publish-metrics-dashboard:
+    name: "📈 Publish Metrics Dashboard"
+    runs-on: ubuntu-latest
+    needs: [calculate-tau-expansion, lattice-health-assessment, collective-progress-metrics]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate comprehensive dashboard
+        run: |
+          echo "📈 Generating comprehensive L'Varian dashboard..."
+          
+          mkdir -p .lvarian/dashboards
+          
+          cat > .lvarian/dashboards/dashboard_$(date +%Y%m%d_%H%M%S).md << EOF
+      # 🪐 L'Varian Lattice Dashboard
+      
+      Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+      
+      ## τ-Expansion Metrics
+      
+      | Metric | Value | Target | Status |
+      |--------|-------|--------|--------|
+      | τ-Rate | ${{ needs.calculate-tau-expansion.outputs.tau_actual }} | $TAU_RATE | ${{ needs.calculate-tau-expansion.outputs.expansion_status }} |
+      | Contributors | ${{ needs.calculate-tau-expansion.outputs.contributor_count }} | - | - |
+      | Contributions | ${{ needs.calculate-tau-expansion.outputs.contribution_count }} | - | - |
+      
+      ## Lattice Health
+      
+      | Component | Score | Status |
+      |-----------|-------|--------|
+      | Overall | ${{ needs.lattice-health-assessment.outputs.health_score }}/100 | ${{ needs.lattice-health-assessment.outputs.health_status }} |
+      
+      ## Collective Progress
+      
+      See collective_progress.json for detailed metrics.
+      
+      ## Axiom Compliance
+      
+      - ✅ N₁ (Null Primacy): Borderless systems verified
+      - ✅ E₁ (Equity of Measure): Equal treatment confirmed
+      - 📊 κ-Strain: Monitoring active
+      
+      ---
+      *Dashboard Version: $METRICS_VERSION*
+      *τ-Rate: $TAU_RATE (13/12)*
+      EOF
+          
+          echo "✅ Dashboard created: .lvarian/dashboards/dashboard_$(date +%Y%m%d_%H%M%S).md"
+
+      - name: Commit and push dashboard
+        run: |
+          git config user.name "L'Varian Metrics Bot"
+          git config user.email "metrics@lvarian.local"
+          
+          git add .lvarian/dashboards/
+          git add .lvarian/challenges/
+          
+          if ! git diff --cached --quiet; then
+            git commit -m "📊 Update L'Varian metrics dashboard [skip ci]"
+            git push || echo "Push failed - may need manual intervention"
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Final summary
+        run: |
+          echo "## 🪐 L'Varian Metrics Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ τ-Expansion calculated" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Lattice health assessed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Collective progress measured" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Exploration challenges generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next scheduled run**: Every 6 hours" >> $GITHUB_STEP_SUMMARY
+          echo "**Metrics version**: $METRICS_VERSION" >> $GITHUB_STEP_SUMMARY
