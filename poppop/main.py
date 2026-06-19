@@ -58,7 +58,7 @@ class PopPop:
         self._running = False
         print("PopPop daemon stopped")
     
-    def record_event(self, work_type="work", intensity=1.0, context_data=None):
+    def record_event(self, work_type="work", intensity=1.0, context_data=None, session_id=None):
         """
         Record a work event.
         
@@ -66,6 +66,7 @@ class PopPop:
             work_type: Type of work (e.g., "continuum", "planck", "vacuum")
             intensity: Focus intensity (1.0 = normal, >1.0 = hyper-focused)
             context_data: Additional context to save
+            session_id: Optional custom session ID (if None, auto-generated)
         
         Returns:
             Event record with status
@@ -73,9 +74,10 @@ class PopPop:
         if context_data is None:
             context_data = {}
         
-        # Generate session ID
-        self._session_counter += 1
-        session_id = f"session_{self._session_counter}_{int(time.time())}"
+        # Generate session ID if not provided
+        if session_id is None:
+            self._session_counter += 1
+            session_id = f"session_{self._session_counter}_{int(time.time())}"
         self._last_session_id = session_id
         
         # Add context metadata
@@ -129,10 +131,23 @@ class PopPop:
             'last_session': self._last_session_id
         }
     
-    def get_history(self, limit=10):
-        """Get work history."""
+    def get_history(self, limit=None):
+        """Get work history.
+        
+        Args:
+            limit: Maximum number of sessions to return (None for all)
+        
+        Returns:
+            All work sessions, or last 'limit' sessions if specified
+        """
         sessions = self.coherence_chamber._work_sessions
-        return sessions[-limit:] if limit else sessions
+        if limit is None:
+            return sessions
+        return sessions[-limit:]
+    
+    def get_all_history(self):
+        """Get ALL work history - guaranteed complete, no truncation."""
+        return self.get_history(limit=None)
     
     def get_gaps(self):
         """Get detected gap periods."""
