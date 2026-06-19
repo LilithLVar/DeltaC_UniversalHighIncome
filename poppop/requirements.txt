@@ -1,5 +1,0 @@
-# PopPop - Pure L'Varian Daemon
-# Only standard library dependencies - no external packages
-# This ensures pure L'Varian mathematics, physics, CS, and ML only
-
-# No dependencies - Python standard library only
